@@ -1,0 +1,63 @@
+version: "3.3"
+
+services:
+  traefik:
+    container_name: "traefik"
+    image: "traefik:v2.2"
+    command:
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --providers.docker
+      - --api
+      - --certificatesresolvers.le.acme.email=irafaxbl@gmail.com
+      - --certificatesresolvers.le.acme.storage=/acme.json
+      - --certificatesresolvers.le.acme.tlschallenge=true
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./acme.json:/acme.json"
+      - /var/log/traefik:/var/log
+    labels:
+      # Dashboard
+      - "traefik.http.routers.traefik.rule=Host(`traefik.asir4fun.es`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=admin"
+      - "traefik.http.routers.traefik.tls.certresolver=le"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.middlewares.admin.basicauth.users=frodo:$$apr1$$5DD9t0Kq$$27evEmymiNi9RSLpVh9vl0"
+
+  myserver1:
+    image: nginx
+    container_name: nginx1
+    restart: always
+    volumes:
+      - ./nginx/index-server1.html:/usr/share/nginx/html/index.html
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.app.loadbalancer.server.port=80"
+      - "traefik.http.routers.app.rule=Host(`balanceador.asir4fun.es`)"
+      - "traefik.http.routers.app.entrypoints=websecure"
+      - "traefik.http.routers.app.tls=true"
+      - "traefik.http.routers.app-http.rule=Host(`localhost`)"
+      - "traefik.http.routers.app-http.entrypoints=web"
+      - "traefik.http.routers.app-http.middlewares=redirect-secure"
+      - "traefik.http.middlewares.redirect-secure.redirectscheme.scheme=https"
+
+  myserver2:
+    image: nginx
+    container_name: nginx2
+    restart: always
+    volumes:
+      - ./nginx/index-server2.html:/usr/share/nginx/html/index.html
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.app.loadbalancer.server.port=80"
+      - "traefik.http.routers.app.rule=Host(`balanceador.asir4fun.es`)"
+      - "traefik.http.routers.app.entrypoints=websecure"
+      - "traefik.http.routers.app.tls=true"
+      - "traefik.http.routers.app-http.rule=Host(`localhost`)"
+      - "traefik.http.routers.app-http.entrypoints=web"
+      - "traefik.http.routers.app-http.middlewares=redirect-secure"
+      - "traefik.http.middlewares.redirect-secure.redirectscheme.scheme=https"
